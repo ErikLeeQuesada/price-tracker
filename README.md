@@ -31,7 +31,7 @@ Normally I never do Read.me's but since this project contains both a proper fron
 
 2. **Clone and Setup**
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/ErikLeeQuesada/price-tracker>
    cd price-tracker
    bundle install
    ```
