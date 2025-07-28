@@ -1,0 +1,465 @@
+<% @title = "Dashboard - Price Tracker" %>
+
+
+<!-- Add Product Form -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Add New Product</h2>
+    <form method="POST" action="/products" class="space-y-4" id="add-product-form">
+        <input type="hidden" name="csrf_token" value="<%= session[:csrf_token] %>">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
+                    Product URL *
+                </label>
+                <input 
+                    type="url" 
+                    id="url" 
+                    name="url" 
+                    required
+                    placeholder="https://www.ebay.com/itm/..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                <p class="text-sm text-gray-500 mt-1">
+                    Supported: eBay, Amazon, Best Buy
+                </p>
+            </div>
+
+            <div>
+                <label for="current_price" class="block text-sm font-medium text-gray-700 mb-2">
+                    Current Price (Optional)
+                </label>
+                <input 
+                    type="number" 
+                    id="current_price" 
+                    name="current_price" 
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+            </div>
+
+            <div>
+                <label for="target_price" class="block text-sm font-medium text-gray-700 mb-2">
+                    Target Price (Optional)
+                </label>
+                <input 
+                    type="number" 
+                    id="target_price" 
+                    name="target_price" 
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+            </div>
+        </div>
+
+        <div class="flex justify-end">
+            <button 
+                type="submit" 
+                class="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors"
+                id="submit-btn"
+            >
+                Add Product
+            </button>
+        </div>
+    </form>
+</div>
+
+
+
+    <!-- Live Console Demo -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">SIMULATED Console Demo (with your real links!)</h2>
+        <p class="text-gray-600 mb-4">Watch real-time scraping output as you add products, go ahead, try it out!</p>
+    
+    <!-- Console Display -->
+    <div class="bg-gray-900 rounded-lg p-4 font-mono text-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            </div>
+            <span class="text-gray-400 text-xs">Live Console Output</span>
+        </div>
+        <div id="console-output" class="bg-black rounded p-3 h-[600px] overflow-y-auto text-green-400 font-mono text-sm leading-relaxed">
+            <div class="text-gray-500">Waiting for scraping to begin...</div>
+        </div>
+    </div>
+    
+    <!-- Console Controls -->
+    <div class="mt-4 flex items-center space-x-4">
+        <button id="clear-console" class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">
+            Clear Console
+        </button>
+        <button id="copy-console" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+            Copy Output
+        </button>
+        <button id="test-console" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+            Test Console
+        </button>
+        <span id="console-status" class="text-sm text-gray-600">Ready</span>
+    </div>
+</div>
+
+
+<!-- Recent Products -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">Your Products</h2>
+            <div class="flex space-x-4">
+                <button id="refresh-products" class="text-green-600 hover:text-green-800 font-medium">
+                    Refresh List
+                </button>
+                <a href="/products" class="text-blue-600 hover:text-blue-800 font-medium">
+                    View All Products →
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="p-6">
+        <% if @products && @products.any? %>
+            <div class="space-y-4">
+                <% @products.first(5).each do |product| %>
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900 mb-1">
+                                    <%= product[:title] %>
+                                </h3>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    <%= shorten_url(product[:url]) %>
+                                </p>
+                                <div class="flex items-center space-x-4 text-sm">
+                                    <span class="font-semibold text-lg text-gray-900">
+                                        $<%= product[:price] %>
+                                    </span>
+                                    <span class="text-gray-500">
+                                        <%= product[:confidence] %>% confidence
+                                    </span>
+                                    <span class="text-gray-500">
+                                        <%= Time.parse(product[:last_updated]).strftime('%b %d') %>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="/products/<%= product[:id] %>/refresh" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                    Refresh
+                                </a>
+                                <form method="POST" action="/products/<%= product[:id] %>/delete" class="inline" onsubmit="return confirm('Delete this product?')">
+                                    <input type="hidden" name="csrf_token" value="<%= session[:csrf_token] %>">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                <% end %>
+            </div>
+        <% else %>
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No products yet</h3>
+                <p class="mt-1 text-sm text-gray-500">Add your first product to start tracking prices.</p>
+            </div>
+        <% end %>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Products Tracked</p>
+                <p class="text-2xl font-semibold text-gray-900"><%= @products ? @products.length : 0 %></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Target Alerts</p>
+                <p class="text-2xl font-semibold text-gray-900">
+                    <%= @products ? @products.count { |p| p[:target_price] && p[:price] && p[:price] <= p[:target_price] } : 0 %>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100">
+                <svg class="mx-auto h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Avg Confidence</p>
+                <p class="text-2xl font-semibold text-gray-900">
+                    <%= @products && @products.any? ? (@products.sum { |p| p[:confidence] || 0 } / @products.length).round : 0 %>%
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Console JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const consoleOutput = document.getElementById('console-output');
+    const consoleStatus = document.getElementById('console-status');
+    const clearConsoleBtn = document.getElementById('clear-console');
+    const copyConsoleBtn = document.getElementById('copy-console');
+    const testConsoleBtn = document.getElementById('test-console');
+    const refreshProductsBtn = document.getElementById('refresh-products');
+    const addProductForm = document.getElementById('add-product-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    let eventSource = null;
+    let isConnected = false;
+    let messageQueue = [];
+    let isProcessingQueue = false;
+    
+    // Batch message processing to prevent console overload
+    function processMessageQueue() {
+        if (isProcessingQueue || messageQueue.length === 0) return;
+        
+        isProcessingQueue = true;
+        const batch = messageQueue.splice(0, 10); // Process 10 messages at a time
+        
+        batch.forEach(messageData => {
+            addMessage(messageData.message, messageData.type);
+        });
+        
+        isProcessingQueue = false;
+        
+        // Continue processing if there are more messages
+        if (messageQueue.length > 0) {
+            setTimeout(processMessageQueue, 50); // Small delay between batches
+        }
+    }
+    
+    // Initialize SSE connection
+    function initEventSource() {
+        if (eventSource) {
+            eventSource.close();
+        }
+        
+        eventSource = new EventSource('/console/stream');
+        
+        eventSource.onopen = function() {
+            isConnected = true;
+            consoleStatus.textContent = 'Connected';
+            consoleStatus.className = 'text-sm text-green-600';
+            addMessage('Console connected - ready for live output', 'system');
+        };
+        
+        eventSource.onmessage = function(event) {
+            const message = event.data;
+            
+            // Handle special console signals
+            if (message.includes('[READY]')) {
+                consoleStatus.textContent = 'Ready for scraping';
+                consoleStatus.className = 'text-sm text-green-600';
+                addMessage('Console ready - you can now add products to see live scraping!', 'system');
+                return;
+            }
+            
+            // Queue message for batch processing
+            messageQueue.push({ message: message, type: 'log' });
+            processMessageQueue();
+        };
+        
+        eventSource.onerror = function() {
+            isConnected = false;
+            consoleStatus.textContent = 'Disconnected';
+            consoleStatus.className = 'text-sm text-red-600';
+            addMessage('Console disconnected', 'error');
+            
+            // Try to reconnect after 3 seconds
+            setTimeout(initEventSource, 3000);
+        };
+    }
+    
+    // Add message to console with typing effect
+    function addMessage(message, type = 'log') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'mb-1';
+        
+        // Color coding based on message type
+        let colorClass = 'text-green-400';
+        if (type === 'error') colorClass = 'text-red-400';
+        else if (type === 'system') colorClass = 'text-blue-400';
+        else if (type === 'warning') colorClass = 'text-yellow-400';
+        
+        messageDiv.className = `mb-1 ${colorClass}`;
+        
+        // Add timestamp
+        const timestamp = new Date().toLocaleTimeString();
+        const timestampSpan = document.createElement('span');
+        timestampSpan.className = 'text-gray-500 mr-2';
+        timestampSpan.textContent = `[${timestamp}] `;
+        messageDiv.appendChild(timestampSpan);
+        
+        // Add the message with typing effect
+        const messageSpan = document.createElement('span');
+        messageDiv.appendChild(messageSpan);
+        consoleOutput.appendChild(messageDiv);
+        
+        // Performance optimization: Skip typing effect for rapid messages
+        const isRapidMessage = message.includes('[PARSE]') || message.includes('[FETCH]') || message.includes('[SCRAPE]');
+        
+        if (isRapidMessage) {
+            // Skip typing effect for performance-critical messages
+            messageSpan.textContent = message;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        } else {
+            // Type the message character by character (slower for non-critical messages)
+            let index = 0;
+            const typeInterval = setInterval(() => {
+                if (index < message.length) {
+                    messageSpan.textContent += message[index];
+                    index++;
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                } else {
+                    clearInterval(typeInterval);
+                }
+            }, 5); // Reduced from 10ms to 5ms for faster typing
+        }
+        
+        // Auto-scroll to bottom
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+    
+    // Clear console
+    clearConsoleBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the console output? This action cannot be undone.')) {
+            consoleOutput.innerHTML = '<div class="text-gray-500">Console cleared...</div>';
+            addMessage('Console cleared by user', 'system');
+        }
+    });
+    
+    // Copy console output
+    copyConsoleBtn.addEventListener('click', function() {
+        const text = consoleOutput.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            copyConsoleBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyConsoleBtn.textContent = 'Copy Output';
+            }, 2000);
+        });
+    });
+    
+    // Test console functionality
+    testConsoleBtn.addEventListener('click', function() {
+        addMessage('Testing console connection...', 'system');
+        fetch('/api/test-console')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage('Console test successful!', 'system');
+                } else {
+                    addMessage('Console test failed: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                addMessage('Console test error: ' + error.message, 'error');
+            });
+    });
+    
+    // Refresh products list
+    refreshProductsBtn.addEventListener('click', function() {
+        addMessage('Refreshing product list...', 'system');
+        window.location.reload();
+    });
+    
+    // Handle form submission with console integration
+    addProductForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(addProductForm);
+        const url = formData.get('url');
+        
+        if (!url) {
+            addMessage('Error: Please provide a product URL', 'error');
+            return;
+        }
+        
+        // Wait for console connection before starting
+        if (!isConnected) {
+            addMessage('Waiting for console connection...', 'warning');
+            setTimeout(() => {
+                addProductForm.dispatchEvent(new Event('submit'));
+            }, 1000);
+            return;
+        }
+        
+        // Update UI
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Scraping...';
+        addMessage(`Starting scrape for: ${url}`, 'system');
+        
+        // Submit form via AJAX to see console output
+        fetch('/products', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': document.querySelector('input[name="csrf_token"]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage(`SUCCESS: ${data.message}`, 'system');
+                addMessage(`Product: ${data.title}`, 'system');
+                addMessage(`Price: $${data.price}`, 'system');
+                addMessage(`Confidence: ${data.confidence}%`, 'system');
+                addMessage('Product added successfully! Console output preserved.', 'system');
+                addMessage('Tip: Click "Refresh List" to see the new product in the list below.', 'system');
+                // Don't reload the page - keep console output
+                // setTimeout(() => {
+                //     window.location.reload();
+                // }, 2000);
+            } else {
+                addMessage(`ERROR: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            addMessage(`ERROR: ${error.message}`, 'error');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Product';
+        });
+    });
+    
+    // Initialize console
+    initEventSource();
+    
+    // Add welcome message
+    setTimeout(() => {
+        addMessage('Price Tracker Console Ready', 'system');
+        addMessage('Add a product URL above to see live scraping output', 'system');
+    }, 1000);
+});
+</script>
