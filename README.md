@@ -1,7 +1,5 @@
 # Price Tracker - Web Scraping Application - Prices!! Yippie!
 
-Normally I never do Read.me's but since this project contains both a proper front-end and back end, I figured it would be useful for review.
-
 ## Features
 
 - **Real-time Web Scraping**: Real-time console output of scraping process
